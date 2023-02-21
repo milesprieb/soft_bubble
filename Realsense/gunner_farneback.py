@@ -72,10 +72,11 @@ def dot_locate(img):
     original = image.copy()
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     blur = cv.GaussianBlur(gray, (3,3), 0)
-    thresh = cv.threshold(blur, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)[1]
+    th1 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)[1]
+    th2 = cv.adaptiveThreshold(gray,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,2)
 
     # Find contours: https://learnopencv.com/contour-detection-using-opencv-python-c/
-    cnts = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cv.findContours(th2, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     #print(np.shape(cnts), np.shape(cnts[0]), np.shape(cnts[1]))
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
 
