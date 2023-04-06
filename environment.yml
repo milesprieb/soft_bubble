@@ -1,0 +1,9 @@
+name: softbubble
+dependencies:
+  - numpy
+  - scipy.spatial.transform 
+  - transforms3d
+  - opencv-contrib-python=4.6.0.66 
+  - rospy
+  - pyrealsense2
+  - open3d
