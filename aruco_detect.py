@@ -117,6 +117,7 @@ def get_K(intrinsics):
     k [0, 2] = intrinsics["ppx"]
     k [1, 2] = intrinsics["ppy"]
     return k 
+
 def main():
 
     config_3 = rs.config()
@@ -129,24 +130,20 @@ def main():
     intrinsics = get_intrinsics(profile.get_stream(rs.stream.depth))
     k = get_K(intrinsics)
 
-    while True:
+    frames = pipeline_3.wait_for_frames()
+    color_frame = frames.get_color_frame()
+    color_image = np.asanyarray(color_frame.get_data())
+    distortion = np.array((-0.43948,0.18514,0,0))
+    rvec1, tvec1 = pose_estimation(color_image, ARUCO_DICT['DICT_4X4_1000'], get_K(intrinsics), distortion)
+    rvec1 = np.squeeze(rvec1)
+    tvec1 = np.squeeze(tvec1)
+    target_t_world = np.zeros((4, 4))
+    target_t_world[:3, :3] = R.from_euler('xyz', rvec1, degrees=False).as_matrix()
+    target_t_world[:3, 3] = tvec1
+    target_t_world[3, 3] = 1
+    print(target_t_world)
 
-        frames = pipeline_3.wait_for_frames()
-        color_frame = frames.get_color_frame()
-        color_image = np.asanyarray(color_frame.get_data())
-        distortion = np.array((-0.43948,0.18514,0,0))
-        rvec1, tvec1 = pose_estimation(color_image, ARUCO_DICT['DICT_4X4_1000'], get_K(intrinsics), distortion)
-        rvec1 = np.squeeze(rvec1)
-        tvec1 = np.squeeze(tvec1)
-        target_t_world = np.zeros((4, 4))
-        target_t_world[:3, :3] = R.from_euler('xyz', rvec1, degrees=False).as_matrix()
-        target_t_world[:3, 3] = tvec1
-        target_t_world[3, 3] = 1
-        
-        print(target_t_world)
-        current_image = cv2.drawFrameAxes(color_image, k*(960/1000), .01, rvec1, tvec1, .1)
-        cv2.imshow('current image', current_image)
-        cv2.waitKey(1)
+    return target_t_world
 
 
 if __name__ == '__main__':
