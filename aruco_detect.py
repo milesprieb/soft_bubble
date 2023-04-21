@@ -67,7 +67,7 @@ def pose_estimation(frame, aruco_dict_type, matrix_coefficients, distortion_coef
     #print(len(rejected))
     if len(corners) > 0:
         for i in range(0, len(ids)):
-            rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], .1, matrix_coefficients,
+            rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], .152, matrix_coefficients,
                                                                            distortion_coefficients)
 
             cv2.aruco.drawDetectedMarkers(frame, corners)
@@ -77,9 +77,6 @@ def pose_estimation(frame, aruco_dict_type, matrix_coefficients, distortion_coef
         rvec = [[0.0], [0.0], [0.0]]
         tvec = [[0.0], [0.0], [0.0]]
         return rvec, tvec
-
-    
-
 def get_aruco_t_camera(color_image, intrinsic, aruco_type):
     aruco_dict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
     aruco_params = cv2.aruco.DetectorParameters_create()
@@ -127,13 +124,16 @@ def main():
     pipeline_3 = rs.pipeline()
     pipeline_3.start(config_3)
     profile = pipeline_3.get_active_profile()
-    intrinsics = get_intrinsics(profile.get_stream(rs.stream.depth))
+    intrinsics = get_intrinsics(profile.get_stream(rs.stream.color))
     k = get_K(intrinsics)
+    # k = [737.75, 0.0, 479.33203125, 0.0, 738.078125, 402.32421875, 0.0, 0.0, 1.0]
+    # k = np.array(k).reshape((3, 3))
+    print(k)
 
     frames = pipeline_3.wait_for_frames()
     color_frame = frames.get_color_frame()
     color_image = np.asanyarray(color_frame.get_data())
-    distortion = np.array((-0.43948,0.18514,0,0))
+    distortion = np.array((0.13502083718776703, -0.45846807956695557, 0.0004646176239475608, -0.0007709880592301488, 0.4213307201862335))
     rvec1, tvec1 = pose_estimation(color_image, ARUCO_DICT['DICT_4X4_1000'], get_K(intrinsics), distortion)
     rvec1 = np.squeeze(rvec1)
     tvec1 = np.squeeze(tvec1)
@@ -141,7 +141,14 @@ def main():
     target_t_world[:3, :3] = R.from_euler('xyz', rvec1, degrees=False).as_matrix()
     target_t_world[:3, 3] = tvec1
     target_t_world[3, 3] = 1
-    print(target_t_world)
+    print(tvec1)
+            
+    current_image = cv2.drawFrameAxes(color_image, k*(960/1000), .01, rvec1, tvec1, .1)
+    # cv2.imshow('current image', current_image)
+    # cv2.waitKey(1)
+    cv2.imwrite('./aruco_test.png', current_image)
+    exit()
+
 
     return target_t_world
 
