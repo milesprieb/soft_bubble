@@ -58,16 +58,22 @@ def aruco_display(corners, ids, rejected, image):
             print("[Inference] No ArUco markers detected")
 
     return image
+
 def pose_estimation(frame, aruco_dict_type, matrix_coefficients, distortion_coefficients):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     aruco_dict = cv2.aruco.Dictionary_get(aruco_dict_type)
     parameters = cv2.aruco.DetectorParameters_create()
-
+    parameters.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
     corners, ids, rejected = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-    #print(len(rejected))
+    # print(ids)
+    #define estimate parameters
+    # estimateParameters = cv2.aruco.DetectorParameters_create()
+    # estimateParameters.solvePnPMethod=cv2.SOLVEPNP_ITERATIVE
     if len(corners) > 0:
         for i in range(0, len(ids)):
-            rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], .152, matrix_coefficients,
+            # rvec, tvec, markerPoints = cv2.solvePnP(corners[i].astype(np.float32), matrix_coefficients,
+            #             distortion_coefficients)
+            rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.0508, matrix_coefficients,
                                                                            distortion_coefficients)
 
             cv2.aruco.drawDetectedMarkers(frame, corners)
@@ -77,6 +83,7 @@ def pose_estimation(frame, aruco_dict_type, matrix_coefficients, distortion_coef
         rvec = [[0.0], [0.0], [0.0]]
         tvec = [[0.0], [0.0], [0.0]]
         return rvec, tvec
+    
 def get_aruco_t_camera(color_image, intrinsic, aruco_type):
     aruco_dict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
     aruco_params = cv2.aruco.DetectorParameters_create()
@@ -115,42 +122,54 @@ def get_K(intrinsics):
     k [1, 2] = intrinsics["ppy"]
     return k 
 
-def main():
+def aruco_track(color_image, intrinsics):
+    distortion = np.array([0.13502083718776703, -0.45846807956695557, 0.0004646176239475608, -0.0007709880592301488, 0.4213307201862335])
 
-    config_3 = rs.config()
-    config_3.enable_device('f1371463')
-    config_3.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-    config_3.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-    pipeline_3 = rs.pipeline()
-    pipeline_3.start(config_3)
-    profile = pipeline_3.get_active_profile()
-    intrinsics = get_intrinsics(profile.get_stream(rs.stream.color))
-    k = get_K(intrinsics)
-    # k = [737.75, 0.0, 479.33203125, 0.0, 738.078125, 402.32421875, 0.0, 0.0, 1.0]
-    # k = np.array(k).reshape((3, 3))
-    print(k)
-
-    frames = pipeline_3.wait_for_frames()
-    color_frame = frames.get_color_frame()
-    color_image = np.asanyarray(color_frame.get_data())
-    distortion = np.array((0.13502083718776703, -0.45846807956695557, 0.0004646176239475608, -0.0007709880592301488, 0.4213307201862335))
-    rvec1, tvec1 = pose_estimation(color_image, ARUCO_DICT['DICT_4X4_1000'], get_K(intrinsics), distortion)
+    rvec1, tvec1 = pose_estimation(color_image, ARUCO_DICT['DICT_4X4_50'], intrinsics, distortion)
     rvec1 = np.squeeze(rvec1)
     tvec1 = np.squeeze(tvec1)
-    target_t_world = np.zeros((4, 4))
-    target_t_world[:3, :3] = R.from_euler('xyz', rvec1, degrees=False).as_matrix()
-    target_t_world[:3, 3] = tvec1
-    target_t_world[3, 3] = 1
-    print(tvec1)
+    # target_t_world = np.zeros((4, 4))
+    # target_t_world[:3, :3] = R.from_euler('xyz', rvec1, degrees=False).as_matrix()
+    # target_t_world[:3, 3] = tvec1
+    # target_t_world[3, 3] = 1
+
+    #concatenate rvec and tvec
+    aruco_T_camera = np.concatenate((tvec1, rvec1), -1)
+    print(aruco_T_camera)
+    return(rvec1, tvec1)
             
-    current_image = cv2.drawFrameAxes(color_image, k*(960/1000), .01, rvec1, tvec1, .1)
-    # cv2.imshow('current image', current_image)
-    # cv2.waitKey(1)
-    cv2.imwrite('./aruco_test.png', current_image)
-    exit()
+
+def main():
 
 
-    return target_t_world
+    pipeline_3 = rs.pipeline()
+    config_3 = rs.config()
+    config_3.enable_device('f1371463')
+    config_3.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
+    config_3.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+
+
+    pipeline_3.start(config_3)
+    profile3 = pipeline_3.get_active_profile()
+    # intrinsics3 = get_intrinsics(profile3.get_stream(rs.stream.depth))
+    intrinsics3 = get_intrinsics(profile3.get_stream(rs.stream.color))
+
+    while not rospy.is_shutdown():
+        frames_3 = pipeline_3.wait_for_frames()
+        color_frame_3 = frames_3.get_color_frame()
+        color_image_3 = np.asanyarray(color_frame_3.get_data())
+        # print(get_K(intrinsics3))
+        # intrinsic = np.array([[875.94761001,  0.,         659.43610256],
+        #                   [  0.,         874.99474978, 368.17954813],
+        #                   [  0.,           0.,           1.        ]])
+        
+        rvec1, tvec1 = aruco_track(color_image_3, get_K(intrinsics3))
+
+        current_image = cv2.drawFrameAxes(color_image_3, get_K(intrinsics3), 0.0508, rvec1, tvec1, .1)
+        cv2.imwrite('aruco_track.png', current_image)
+
+
+    # return target_t_world
 
 
 if __name__ == '__main__':
