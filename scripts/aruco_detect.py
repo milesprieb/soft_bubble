@@ -133,8 +133,8 @@ def aruco_track(color_image, intrinsics):
     #concatenate rvec and tvec
     aruco_T_camera = np.concatenate((tvec1, rvec1), -1)
     
-    current_image = cv2.drawFrameAxes(color_image, get_K(intrinsics), 0.050, rvec1, tvec1, .1)
-    cv2.imwrite('./aruco_test.png', current_image)
+    # current_image = cv2.drawFrameAxes(color_image, get_K(intrinsics), 0.050, rvec1, tvec1, .1)
+    # cv2.imwrite('./aruco_test.png', current_image)
 
     return(aruco_T_camera)
 

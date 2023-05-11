@@ -7,6 +7,10 @@ import pyrealsense2 as rs
 import sys
 import rospy
 import std_msgs.msg
+from visualization_msgs.msg import *
+from std_msgs.msg import *
+from geometry_msgs.msg import *
+from sensor_msgs.msg import *
 
 
 def draw_flow(img, flow, step=16):
@@ -22,7 +26,8 @@ def draw_flow(img, flow, step=16):
     return vis
 
 def draw_flow_ltx(img, flow, dots, step=16):
-    y, x = zip(*dots)
+    if len(dots) > 0:
+        y, x = zip(*dots)
     #print(len(y),len(x))
     fx, fy = flow[y,x].T
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)
@@ -57,7 +62,49 @@ def dot_locate(img):
 
     return points
     
+def _image_to_msg(image, request_header, image_condition):
+    msg = Image()
+    msg.height = image.shape[0]
+    msg.width = image.shape[1]
+    np_image = np.array(image)
+    if np.issubdtype(np_image.dtype, np.floating):
+        if np_image.max() <= 1:
+            np_image *= 255
+        else:
+            raise RuntimeError("Ambiguous image values...")
+    elif np_image.max() <= 1:
+        np_image *= 255
+    msg.header.frame_id = request_header.frame_id
+    msg.header.stamp = request_header.stamp
 
+    if len(image.shape) == 2:
+        if image.dtype == np.uint8:
+            msg.is_bigendian = True
+            msg.encoding = 'mono8'
+            msg.step = msg.width
+            np_image = np_image.astype(np.uint8)
+        elif image.dtype == np.uint16:
+            msg.is_bigendian = False
+            msg.encoding = '16UC1'
+            msg.step = 2 * msg.width
+            np_image = np_image.astype(np.uint16)
+    elif len(image.shape) == 3:
+        if image.shape[-1] == 3:
+            msg.is_bigendian = True
+            msg.encoding = 'rgb8'
+            msg.step = 3 * msg.width
+            np_image = np_image.astype(np.uint8)
+        if image.shape[-1] == 4:
+            msg.is_bigendian = True
+            msg.encoding = 'rgba8'
+            msg.step = 4 * msg.width
+            np_image = np_image.astype(np.uint8)
+
+    if image_condition:
+        msg.data = np_image.reshape(-1).tolist()
+    else:
+        msg.data = np_image.reshape(-1)
+    return msg
 
 def main():
     
@@ -202,17 +249,35 @@ def main():
             # Stack all images horizontally
             images = np.hstack((flipped_1, flipped_2))
 
-            dots = dot_locate(color_image_1)
-            res = cv.flip(draw_flow_ltx(gray_1, flow_1, dots),1)
+            bubble_pcd = Image()
+            #filling pointcloud header
+            header_bubble = std_msgs.msg.Header()
+            header_bubble.stamp = rospy.Time.now()
+            header_bubble.frame_id = 'left_robotiq_85_base_link'
+            bubble_pcd.header = header_bubble
+
+            ros_bubble_image_1 = _image_to_msg(flipped_1, bubble_pcd.header, image_condition=True)
+            ros_bubble_image_2 = _image_to_msg(flipped_2, bubble_pcd.header, image_condition=True)
+
+            images_publisher1 = rospy.Publisher("/bubble_rgb1", Image, queue_size=10)
+            images_publisher2 = rospy.Publisher("/bubble_rgb2", Image, queue_size=10)
+
+            images_publisher1.publish(ros_bubble_image_1)
+            images_publisher2.publish(ros_bubble_image_2)
+
+            # dots = dot_locate(color_image_1)
+            # res = cv.flip(draw_flow_ltx(gray_1, flow_1, dots),1)
 
             # Write to video file
-            out.write(res)
+            # out.write(res)
 
             # Check if slip is detected
             slip_cond = np.mean(flow_1) + np.mean(flow_2)
             if slip_cond > 1.0:
                 rospy.loginfo("Slip detected!")
                 shear_publisher.publish(slip_cond)
+
+            
 
             # Show images from both cameras
             cv.namedWindow('RealSense', cv.WINDOW_NORMAL)

@@ -10,6 +10,8 @@ import cv2
 import cv2.aruco as aruco
 from transforms3d import *
 from scipy.spatial.transform import Rotation as R
+import pandas as pd
+import matplotlib.pyplot as plt
 
 ARUCO_DICT = {
     "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
@@ -124,45 +126,36 @@ def get_K(intrinsics):
     k [1, 2] = intrinsics["ppy"]
     return k 
 
-def trans_eval(ee_T_obj, aruco_gt):
+def trans_eval(ee_T_obj, aruco_gt, error):
     listener = tf.TransformListener()
     trans = []
     while not trans:
         try:
-            (trans,rot) = listener.lookupTransform('world', 'robotiq_85_base_link', rospy.Time(0))
+            (trans,rot) = listener.lookupTransform('world', 'left_robotiq_85_base_link', rospy.Time(0))
             rot = tf.transformations.euler_from_quaternion(rot)
             world_T_ee = np.zeros((4, 4))
             world_T_ee[:3, :3] = R.from_euler('xyz', rot, degrees=False).as_matrix()
             world_T_ee[:3, 3] = trans
             world_T_ee[3, 3] = 1
             
-            obj_T_world = np.matmul(world_T_ee, ee_T_obj)
+            obj_T_world = np.matmul(world_T_ee, ee_T_obj) 
             # print(obj_T_world)
             # convert to 6D pose    
-            obj_eul = R.from_matrix(obj_T_world[:3, :3]).as_euler('xyz', degrees=False)
-            obj_T_world_eval = [obj_T_world[0, 3], obj_T_world[1, 3], obj_T_world[2, 3], obj_eul[0], obj_eul[1], obj_eul[2]]
-
-            rmse = np.zeros(6)
-            # rmse[0] = np.array(obj_T_world_eval[0]) - np.array(aruco_gt[0]) 
-            # rmse[1] = np.array(obj_T_world_eval[1]) - np.array(aruco_gt[1])
-            # rmse[2] = np.array(obj_T_world_eval[2]) - np.array(aruco_gt[2]) 
-            # rmse[3] = np.array(obj_T_world_eval[3]) - np.array(aruco_gt[3]) 
-            # rmse[4] = np.array(obj_T_world_eval[4]) - np.array(aruco_gt[4]) 
-            # rmse[5] = np.array(obj_T_world_eval[5]) - np.array(aruco_gt[5]) 
-
-
-
-            rmse[0] = np.sqrt(np.mean(np.abs((np.array(obj_T_world_eval[0]) - np.array(aruco_gt[0])))))
-            rmse[1] = np.sqrt(np.mean(np.abs((np.array(obj_T_world_eval[1]) - np.array(aruco_gt[1])))))
-            rmse[2] = np.sqrt(np.mean(np.abs((np.array(obj_T_world_eval[2]) - np.array(aruco_gt[2])))))
-            rmse[3] = np.sqrt(np.mean(np.abs((np.array(obj_T_world_eval[3]) - np.array(aruco_gt[3])))))
-            rmse[4] = np.sqrt(np.mean(np.abs((np.array(obj_T_world_eval[4]) - np.array(aruco_gt[4])))))
-            rmse[5] = np.sqrt(np.mean(np.abs((np.array(obj_T_world_eval[5]) - np.array(aruco_gt[5])))))
-            # print(rmse)
-            return rmse, obj_T_world
+            # obj_eul = R.from_matrix(obj_T_world[:3, :3]).as_euler('xyz', degrees=False)
+            obj_quat = R.from_matrix(obj_T_world[:3, :3]).as_quat()
+            obj_T_world_eval = np.array([obj_T_world[0, 3], obj_T_world[1, 3], obj_T_world[2, 3], obj_quat[0], obj_quat[1], obj_quat[2], obj_quat[3]])
+            
+            # matplotlib 
+            error_t = np.linalg.norm(obj_T_world_eval[:2] - np.array(aruco_gt[:2]), 2)
+            error_r = 1- np.abs((obj_T_world_eval[3:]/np.linalg.norm(obj_T_world_eval[3:])).dot(np.array(aruco_gt[3:])/np.linalg.norm(aruco_gt[3:])))
+            if np.isnan(error_t) or np.isnan(error_r):
+                print('Nan error')
+            else:
+                print(f'Translation error:{error_t}, Rotation error:{error_r}')
+                error = [error_t, error_r]
+            
+            
+            return error, obj_T_world_eval
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             continue
-        rate.sleep()
-    
-    # print(ee_T_world)
