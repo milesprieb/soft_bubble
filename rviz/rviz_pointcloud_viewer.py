@@ -6,7 +6,7 @@ import struct
 from tf.transformations import quaternion_from_matrix, quaternion_matrix, euler_from_quaternion, quaternion_from_euler
 from transforms3d import *
 import tf
-import computeTF2frames
+# import computeTF2frames
 import aruco_detect
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
@@ -20,7 +20,7 @@ from sensor_msgs import point_cloud2
 from visualization_msgs.msg import *
 from std_msgs.msg import *
 from geometry_msgs.msg import *
-import open3d as o3d 
+# import open3d as o3d 
 import cv2 
 
 int_marker_pose = geometry_msgs.msg.Pose()
@@ -40,7 +40,7 @@ def makeBubble( msg ):
     marker = Marker()
     marker.header.frame_id = 'world'
     marker.header.stamp = rospy.Time.now()
-    marker.mesh_resource = 'file:///home/rpmdt05/Code/bubble_gripper_ws/src/soft_bubble/meshes/small_3D_block_3.dae'
+    marker.mesh_resource = 'file:///home/rpmdt05/Code/bubble_gripper_ws/src/soft_bubble/meshes/champagne_init.dae'
     marker.type = marker.MESH_RESOURCE
     marker.color.r = 0
     marker.color.g = 0
@@ -394,7 +394,7 @@ def icp_estimate(color1:Image, depth1:Image, color2:Image, depth2:Image, K1, K2,
     trans_init = np.eye(4)                
     source = o3d.geometry.PointCloud()
     source.points = o3d.utility.Vector3dVector(cat)
-    target = o3d.io.read_point_cloud('/home/rpmdt05/Code/bubble_gripper_ws/src/soft_bubble/meshes/small_3D_block_3.ply')
+    target = o3d.io.read_point_cloud('/home/rpmdt05/Code/bubble_gripper_ws/src/soft_bubble/meshes/Initialized_champagne.ply')
     
     # visualize in open3d
     # o3d.visualization.draw_geometries([source, target],
@@ -516,8 +516,6 @@ def shear_esimate(color_frame_1, color_frame_2, prevgray_1, prevgray_2, bubble_p
 
     images_publisher1.publish(ros_bubble_image_1)
     images_publisher2.publish(ros_bubble_image_2)
-
-    
     # return flow
 
 
@@ -557,7 +555,7 @@ if __name__ == '__main__':
     # Start streaming
     pipeline_1.start(config_1)
     pipeline_2.start(config_2)
-    pipeline_3.start(config_3)
+    # pipeline_3.start(config_3)
 
     # Shear estimation initializations
     frames_1 = pipeline_1.wait_for_frames()
@@ -577,11 +575,11 @@ if __name__ == '__main__':
     # Get stream profile and camera intrinsics
     profile1 = pipeline_1.get_active_profile()
     profile2 = pipeline_2.get_active_profile()
-    profile3 = pipeline_3.get_active_profile()
+    # profile3 = pipeline_3.get_active_profile()
     
     intrinsics1 = get_intrinsics(profile1.get_stream(rs.stream.depth))
     intrinsics2 = get_intrinsics(profile2.get_stream(rs.stream.depth))
-    intrinsics3 = get_intrinsics(profile3.get_stream(rs.stream.color))
+    # intrinsics3 = get_intrinsics(profile3.get_stream(rs.stream.color))
 
 
     rospy.init_node('bubble_gripper')
@@ -589,7 +587,7 @@ if __name__ == '__main__':
     bottle_marker = Marker()
     bottle_marker.header.frame_id = 'world'
     bottle_marker.header.stamp = rospy.Time.now()
-    bottle_marker.mesh_resource = 'file:///home/rpmdt05/Code/bubble_gripper_ws/src/soft_bubble/meshes/small_3D_block_3.dae'
+    bottle_marker.mesh_resource = 'file:///home/rpmdt05/Code/bubble_gripper_ws/src/soft_bubble/meshes/champagne_init.dae'
     bottle_marker.type = bottle_marker.MESH_RESOURCE
 
     bubble_marker = Marker()
@@ -622,12 +620,12 @@ if __name__ == '__main__':
     error_r = []
     error = []
     count = 0
-    confirm = True
+    confirm = False
     while not rospy.is_shutdown():
         # Wait for a coherent pair of frames: depth and color
         frames_1 = pipeline_1.wait_for_frames()
         frames_2 = pipeline_2.wait_for_frames()
-        frames_3 = pipeline_3.wait_for_frames()
+        # frames_3 = pipeline_3.wait_for_frames()
 
         # rospy.loginfo("Got frames")
 
@@ -659,19 +657,19 @@ if __name__ == '__main__':
         depth_image_1 = np.asanyarray(depth_frame.get_data())
         depth_frame_2 = frames_2.get_depth_frame()
         depth_image_2 = np.asanyarray(depth_frame_2.get_data())
-        depth_frame_3 = frames_3.get_depth_frame()
-        depth_image_3 = np.asanyarray(depth_frame_3.get_data())
+        # depth_frame_3 = frames_3.get_depth_frame()
+        # depth_image_3 = np.asanyarray(depth_frame_3.get_data())
 
         # rospy.loginfo("Got depth images")
 
         color_frame = frames_1.get_color_frame()
         color_frame_2 = frames_2.get_color_frame()
-        color_frame_3 = frames_3.get_color_frame()
+        # color_frame_3 = frames_3.get_color_frame()
 
 
         color_image_1 = np.asanyarray(color_frame.get_data())
         color_image_2 = np.asanyarray(color_frame_2.get_data())
-        color_image_3 = np.asanyarray(color_frame_3.get_data())
+        # color_image_3 = np.asanyarray(color_frame_3.get_data())
 
         # Aruco validation
         # if aruco_flag:
@@ -715,14 +713,12 @@ if __name__ == '__main__':
         images_publisher2 = rospy.Publisher("/bubble_rgb2", Image, queue_size=10)
         object_publisher = rospy.Publisher("/visualization_marker", Marker, queue_size = 2)
         object_publisher2 = rospy.Publisher("/visualization_marker2", Marker, queue_size = 2)
-        target_publisher = rospy.Publisher("/target", PointCloud2, queue_size=10)
-        # target_publisher = rospy.Publisher("/target", MultiArrayLayout, queue_size=10)
+        # target_publisher = rospy.Publisher("/target", PointCloud2, queue_size=10)
+        target_publisher = rospy.Publisher("/target", MultiArrayLayout, queue_size=10)
         images_publisher3 = rospy.Publisher("/top_down", Image, queue_size=10)
         shear_publisher = rospy.Publisher('/shear_force_pub', std_msgs.msg.Float32, queue_size=10)
 
         # rospy.loginfo("Publishers declared")
-
-
 
         # #declaring pointcloud
         top_down = Image()
@@ -735,8 +731,8 @@ if __name__ == '__main__':
         #filling pointcloud fields
         ros_bubble_image_1 = _image_to_msg(color_image_1, bubble_pcd.header, image_condition=True)
         ros_bubble_image_2 = _image_to_msg(color_image_2, bubble_pcd.header, image_condition=True)
-        ros_bubble_image_3 = _image_to_msg(color_image_3, bubble_pcd.header, image_condition=True)
-        top_down_img = _image_to_msg(color_image_3, top_down.header, image_condition=True)
+        # ros_bubble_image_3 = _image_to_msg(color_image_3, bubble_pcd.header, image_condition=True)
+        # top_down_img = _image_to_msg(color_image_3, top_down.header, image_condition=True)
 
         ros_bubble_rgb_1 = _image_to_msg(color_image_1, bubble_pcd.header, image_condition=False)
         ros_bubble_depth_1 = _image_to_msg(depth_image_1,bubble_pcd.header, image_condition=False)
@@ -746,102 +742,102 @@ if __name__ == '__main__':
         # ros_bubble_rgb_3 = _image_to_msg(color_image_3, top_down.header, image_condition=False)
         # ros_bubble_depth_3 = _image_to_msg(depth_image_3,top_down.header, image_condition=False)
 
-        #declaring pointcloud
-        targ_header = PointCloud2()
+        # #declaring pointcloud
+        # targ_header = MultiArrayLayout()
 
-        #filling pointcloud header
-        header_targ = std_msgs.msg.Header()
-        header_targ.stamp = rospy.Time.now()
-        header_targ.frame_id = 'left_robotiq_85_base_link'
-        targ_header.header = header_targ
+        # #filling pointcloud header
+        # header_targ = std_msgs.msg.Header()
+        # header_targ.stamp = rospy.Time.now()
+        # header_targ.frame_id = 'left_robotiq_85_base_link'
+        # targ_header.header = header_targ
 
         # rospy.loginfo("Pointclouds declared")
         # if icp_flag:
-        # pause until enter press
+        # # pause until enter press
         if confirm:
             input("Press Enter to continue...")
             confirm = False
         else:
-            int_marker_pose_eval = [0,0,0,0,0,0,0]
-            int_marker_pose_eval[0] = int_marker_pose.position.x
-            int_marker_pose_eval[1] = int_marker_pose.position.y
-            int_marker_pose_eval[2] = int_marker_pose.position.z
-            int_marker_pose_eval[3] = int_marker_pose.orientation.x
-            int_marker_pose_eval[4] = int_marker_pose.orientation.y
-            int_marker_pose_eval[5] = int_marker_pose.orientation.z
-            int_marker_pose_eval[6] = int_marker_pose.orientation.w
+        #     int_marker_pose_eval = [0,0,0,0,0,0,0]
+        #     int_marker_pose_eval[0] = int_marker_pose.position.x
+        #     int_marker_pose_eval[1] = int_marker_pose.position.y
+        #     int_marker_pose_eval[2] = int_marker_pose.position.z
+        #     int_marker_pose_eval[3] = int_marker_pose.orientation.x
+        #     int_marker_pose_eval[4] = int_marker_pose.orientation.y
+        #     int_marker_pose_eval[5] = int_marker_pose.orientation.z
+        #     int_marker_pose_eval[6] = int_marker_pose.orientation.w
 
             # TODO: change this to be a dictionary of arguments
-            ros_target , obj_T_world = icp_estimate(ros_bubble_rgb_1, ros_bubble_depth_1, ros_bubble_rgb_2, ros_bubble_depth_2, get_K(intrinsics1), get_K(intrinsics2), int_marker_pose_eval, error_t, error_r, count, error)
-            count += 1    
-                # icp_flag = False
-            # rospy.loginfo("Estimating target pointcloud")
-            # print(obj_T_world)
-            # ros_target_pub = package_ros_pointcloud2_nrgb(ros_target, targ_header.header)
-            # target_publisher.publish(ros_target_pub)
+            # ros_target , obj_T_world = icp_estimate(ros_bubble_rgb_1, ros_bubble_depth_1, ros_bubble_rgb_2, ros_bubble_depth_2, get_K(intrinsics1), get_K(intrinsics2), int_marker_pose_eval, error_t, error_r, count, error)
+            # count += 1    
+            #     # icp_flag = False
+            # # rospy.loginfo("Estimating target pointcloud")
+            # # print(obj_T_world)
+            # # ros_target_pub = package_ros_pointcloud2_nrgb(ros_target, targ_header.header)
+            # target_publisher.publish(obj_T_world)
             
             # rospy.loginfo("Publishing target pointcloud")
 
             # multiply by inverse of world_T_ee to get object_T_world
-            #input(ee_T_object)
-            #world_T_obj = world_T_ee @ ee_T_object
+            # input(ee_T_object)
+            # world_T_obj = world_T_ee @ ee_T_object
 
-            #matrix to quaternion
+            # matrix to quaternion
             # q = tf.transformations.quaternion_from_matrix(source_T_target)
 
             #print(goal_pose)
 
-            bubble_marker.color.r = 1
-            bubble_marker.color.g = 0
-            bubble_marker.color.b = 1
-            bubble_marker.color.a = 1
-            bubble_marker.scale.x = 1
-            bubble_marker.scale.y = 1
-            bubble_marker.scale.z = 1
+            # bubble_marker.color.r = 1
+            # bubble_marker.color.g = 0
+            # bubble_marker.color.b = 1
+            # bubble_marker.color.a = 1
+            # bubble_marker.scale.x = 1
+            # bubble_marker.scale.y = 1
+            # bubble_marker.scale.z = 1
 
-            # 4x4 transformation matrix for 90 degree rotation around z-axis
-            T1 = np.array([[0, 1, 0, 0],
-                            [-1, 0, 0, 0],
-                            [0, 0, 1, 0],
-                            [0, 0, 0, 1]])
+            # # 4x4 transformation matrix for 90 degree rotation around z-axis
+            # T1 = np.array([[0, 1, 0, 0],
+            #                 [-1, 0, 0, 0],
+            #                 [0, 0, 1, 0],
+            #                 [0, 0, 0, 1]])
             
-            # 4x4 transformation matrix for 90 degree rotation around x-axis
-            T2 = np.array([[0, 0, 1, 0],
-                        [0, 1, 0, 0],
-                        [-1, 0, 0, 0],
-                        [0, 0, 0, 1]])
+            # # 4x4 transformation matrix for 90 degree rotation around x-axis
+            # T2 = np.array([[0, 0, 1, 0],
+            #             [0, 1, 0, 0],
+            #             [-1, 0, 0, 0],
+            #             [0, 0, 0, 1]])
 
-            T = T1 @ T2
+            # T = T1 @ T2
 
-            q = tf.transformations.quaternion_from_matrix(T)
+            # q = tf.transformations.quaternion_from_matrix(T)
             
-            bubble_marker.pose.position.x = 0.127 + 0.09
-            bubble_marker.pose.position.y = 0
-            bubble_marker.pose.position.z = 0
-            bubble_marker.pose.orientation.x = q[0]
-            bubble_marker.pose.orientation.y = q[1] 
-            bubble_marker.pose.orientation.z = q[2]
-            bubble_marker.pose.orientation.w = q[3]
+            # bubble_marker.pose.position.x = 0.127 + 0.09
+            # bubble_marker.pose.position.y = 0
+            # bubble_marker.pose.position.z = 0
+            # bubble_marker.pose.orientation.x = q[0]
+            # bubble_marker.pose.orientation.y = q[1] 
+            # bubble_marker.pose.orientation.z = q[2]
+            # bubble_marker.pose.orientation.w = q[3]
 
-            bottle_marker.color.r = 0
-            bottle_marker.color.g = 1
-            bottle_marker.color.b = 0
-            bottle_marker.color.a = 1
-            bottle_marker.scale.x = 1
-            bottle_marker.scale.y = 1
-            bottle_marker.scale.z = 1
+            # bottle_marker.color.r = 0
+            # bottle_marker.color.g = 1
+            # bottle_marker.color.b = 0
+            # bottle_marker.color.a = 1
+            # bottle_marker.scale.x = 1
+            # bottle_marker.scale.y = 1
+            # bottle_marker.scale.z = 1
 
-            # get quat form euler
-            # print(aruco_T_camera)
-            q_object = tf.transformations.quaternion_from_euler(obj_T_world[3],  obj_T_world[4], obj_T_world[5], 'sxyz')
+            # # get quat form euler
+            # # print(aruco_T_camera)
+            # q_object = tf.transformations.quaternion_from_euler(obj_T_world[3],  obj_T_world[4], obj_T_world[5], 'sxyz')
             
-            bottle_marker.pose.position.x = obj_T_world[0]
-            bottle_marker.pose.position.y = obj_T_world[1]
-            bottle_marker.pose.position.z = obj_T_world[2]
-            bottle_marker.pose.orientation.x = 0
-            bottle_marker.pose.orientation.y = 0
-            bottle_marker.pose.orientation.z = 0
-            bottle_marker.pose.orientation.w = 1
+            # bottle_marker.pose.position.x = obj_T_world[0]
+            # bottle_marker.pose.position.y = obj_T_world[1]
+            # bottle_marker.pose.position.z = obj_T_world[2]
+            # bottle_marker.pose.orientation.x = 0
+            # bottle_marker.pose.orientation.y = 0
+            # bottle_marker.pose.orientation.z = 0
+            # bottle_marker.pose.orientation.w = 1
 
             # aruco_gt = np.array([-0.13000626, -0.05819804 , 0.74811287, -1.8103643 , -2.46624047 ,-0.36967824])
             # aruco_gt = np.array([-0.19238228, -0.21368314,  1.22777117,  3.13533492, -0.17125897,  0.00505853])
@@ -862,13 +858,13 @@ if __name__ == '__main__':
             bubble_pcd_pub_2 = images_to_pointcloud2(ros_bubble_rgb_2, ros_bubble_depth_2, get_K(intrinsics2), transform=1)
             # top_down = images_to_pointcloud2(ros_bubble_rgb_3, ros_bubble_depth_3, get_K(intrinsics3), transform=3)
 
-            pointcloud_publisher1.publish(bubble_pcd_pub_1)
-            pointcloud_publisher2.publish(bubble_pcd_pub_2)
+            # pointcloud_publisher1.publish(bubble_pcd_pub_1)
+            # pointcloud_publisher2.publish(bubble_pcd_pub_2)
             # pointcloud_publisher3.publish(top_down)
-            # images_publisher1.publish(ros_bubble_image_1)
-            # images_publisher2.publish(ros_bubble_image_2) 
+            images_publisher1.publish(ros_bubble_image_1)
+            images_publisher2.publish(ros_bubble_image_2) 
             rospy.loginfo("publishing bubbles")
-            images_publisher3.publish(top_down_img)
+            # images_publisher3.publish(top_down_img)
 
         # # spin() simply keeps python from exiting until this node is stopped    
         # rospy.spin()
@@ -876,4 +872,4 @@ if __name__ == '__main__':
     # Stop streaming
     pipeline_1.stop()
     pipeline_2.stop()
-    pipeline_3.stop()
+    # pipeline_3.stop()
