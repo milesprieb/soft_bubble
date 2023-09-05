@@ -485,14 +485,14 @@ def shear_esimate(color_frame_1, color_frame_2, prevgray_1, prevgray_2, bubble_p
     # Set up the Farneback optical flow parameters
     farneback_params = dict(pyr_scale=0.5,
                             levels=3,
-                            winsize=15,
+                            winsize=50,
                             iterations=3,
                             poly_n=5,
                             poly_sigma=1.2,
                             flags=0)
 
 
-    #Flow Field Camera 1
+    # Flow Field Camera 1
     prev_1 = color_frame_1
     gray_1 = cv2.cvtColor(color_frame_1, cv2.COLOR_BGR2GRAY)
     flow_1 = cv2.calcOpticalFlowFarneback(prevgray_1, gray_1, None, **farneback_params)
@@ -501,7 +501,7 @@ def shear_esimate(color_frame_1, color_frame_2, prevgray_1, prevgray_2, bubble_p
     flipped_1 = cv2.flip(draw_flow(gray_1, flow_1),1)
     prevgray_1 = cv2.cvtColor(prev_1, cv2.COLOR_BGR2GRAY)
 
-    #Flow Field Camera 2
+    # Flow Field Camera 2
     prev_2 = color_frame_2
     gray_2 = cv2.cvtColor(color_frame_2, cv2.COLOR_BGR2GRAY)
     flow_2 = cv2.calcOpticalFlowFarneback(prevgray_2, gray_2, None, **farneback_params) # 480x640

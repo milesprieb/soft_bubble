@@ -6,6 +6,7 @@ import struct
 from tf.transformations import quaternion_from_matrix, quaternion_matrix, euler_from_quaternion, quaternion_from_euler
 from transforms3d import *
 import tf
+import cv2
 
 # ROS msgs & services
 from interactive_markers.interactive_marker_server import *
@@ -234,7 +235,7 @@ def config_bubble_cams() -> (rs.pipeline, rs.pipeline):
     # Get frames
     frames_1 = pipeline_1.wait_for_frames()
     frames_2 = pipeline_2.wait_for_frames()
-    color_frame = frames_1.get_color_frame()
+    color_frame_1 = frames_1.get_color_frame()
     color_frame_2 = frames_2.get_color_frame()
 
     # Get stream profile and camera intrinsics
@@ -244,3 +245,29 @@ def config_bubble_cams() -> (rs.pipeline, rs.pipeline):
     
     intrinsics1 = get_intrinsics(profile1.get_stream(rs.stream.depth))
     intrinsics2 = get_intrinsics(profile2.get_stream(rs.stream.depth))
+
+    return (pipeline_1, pipeline_2)
+
+def get_images (pipeline_1, pipeline_2) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray):
+    
+    # Cam 1
+    frames_1 = pipeline_1.wait_for_frames()
+    depth_frame_1 = frames_1.get_depth_frame()
+    depth_image_1 = np.asanyarray(depth_frame_1.get_data())
+    color_frame_1 = frames_1.get_color_frame()
+    color_image_1 = np.asanyarray(color_frame_1.get_data())
+    prev_1 = color_frame_1
+    prev_1 = np.asanyarray(prev_1.get_data())
+    prevgray_1 = cv2.cvtColor(prev_1, cv2.COLOR_BGR2GRAY)
+
+    # Cam 2
+    frames_2 = pipeline_2.wait_for_frames()
+    depth_frame_2 = frames_2.get_depth_frame()
+    depth_image_2 = np.asanyarray(depth_frame_2.get_data())
+    color_frame_2 = frames_2.get_color_frame()
+    color_image_2 = np.asanyarray(color_frame_2.get_data())
+    prev_2 = color_frame_2
+    prev_2 = np.asanyarray(prev_2.get_data())
+    prevgray_2 = cv2.cvtColor(prev_2, cv2.COLOR_BGR2GRAY)
+
+    return (depth_image_1, color_image_1, depth_image_2, color_image_2, prevgray_1, prevgray_2)

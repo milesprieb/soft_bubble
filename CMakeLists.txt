@@ -162,10 +162,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/example_script.py
-  scripts/gunner_farneback.py
-  scripts/opencv_pointcloud_viewer.py
-  scripts/computeTF2frames.py
+  scripts/bubble_pub.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
