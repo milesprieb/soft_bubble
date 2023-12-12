@@ -6,3 +6,7 @@ Steps to set this repo up:
 5. Clone repo 
 6. Go back to workspace
 7. Run 'catkin build'
+
+Add guide to reusing current bubble grippers
+Point to 3D models for recreating 
+Point to links for creating new bubble grippers
