@@ -86,8 +86,7 @@ roslaunch dual_arm zeus_bringup.launch
 
 # Re-fabricating 
 To fabricate the RPM Lab's current re-designed version of the Soft Bubble Grippers, follow along with these steps and images. The original version of the build instructions was used for reference and is located under: '/design files/Bubble Gripper Build Instructions v1.0.pdf'. Here are pictures of the steps you can follow along with:
-
-![Soft Bubble V1.0 Fabrication Steps](readme_files\images\fab.png?raw=true)
+![Soft Bubble V1.0 Fabrication Steps](https://i.postimg.cc/3NwKMPms/fab.png)](https://postimg.cc/ygwqcpfj)
 Top-left to bottom-right: (1) Painted latex pattern, mostly used for obtaining a dense depth maps in ICP experiments. Also used for obtaining visual features from deformation. (2) Method of applying spray adhesive to outside wring of acrylic window. (3) Adhering acrylic window to latex membrane. (4) Super gluing acrylic window and latex membrane to 3D-printed sealing band to ensure an air-tight bubble. (5) Re-designed 3D-printed parts including bubble mount, camera mount, and gripper mount. (6) Assembled Soft Bubble grippers.
 
 
